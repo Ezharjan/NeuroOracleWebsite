@@ -1,0 +1,235 @@
+{
+  "$schema": "./config.schema.json",
+  "site": {
+    "title": "Neuro-Oracle: A Trajectory-Aware Agentic RAG Framework for Interpretable Epilepsy Surgical Prognosis",
+    "titleLines": [
+      "Neuro-Oracle: A Trajectory-Aware Agentic RAG Framework",
+      "for Interpretable Epilepsy Surgical Prognosis"
+    ],
+    "venue": "AAAI 2026 Fall Symposium Series",
+    "description": "Neuro-Oracle encodes pre-to-post-operative MRI change as a 512-dimensional trajectory vector, retrieves similar historical cases, and grounds an interpretable epilepsy surgical prognosis in them with a quantized Llama-3-8B agent.",
+    "keywords": "Epilepsy Surgery, Surgical Prognosis, Longitudinal MRI, Siamese Network, Supervised Contrastive Learning, Retrieval-Augmented Generation, Agentic RAG, Large Language Models, Llama-3, FAISS, EPISURG, Interpretability, AAAI 2026 Fall Symposium Series",
+    "favicon": "favicon.ico",
+    "lang": "en",
+    "url": "",
+    "publicationDate": "2026"
+  },
+  "authors": [
+    { "name": "Aizierjiang Aiersilan", "url": "https://ezharjan.github.io/", "affiliations": [1] },
+    { "name": "Mohamad Koubeissi", "url": "https://capitalmedicalgroup.com/profile/mohamad-koubeissi", "affiliations": [1] }
+  ],
+  "affiliations": [
+    { "id": 1, "name": "The George Washington University" }
+  ],
+  "links": [
+    { "type": "arxiv", "label": "arXiv", "icon": "ai ai-arxiv", "url": "https://arxiv.org/abs/2604.14216", "enabled": true },
+    { "type": "code", "label": "Code", "icon": "fab fa-github", "url": "REPLACE_ME", "enabled": false },
+    { "type": "confab", "label": "Confab", "icon": "fas fa-calendar-check", "url": "https://cal.com/ezhar/30min", "enabled": true },
+    { "type": "slides", "label": "Slides", "icon": "fas fa-chalkboard-teacher", "url": "NeuroOracle_AizierjiangAiersilan_silides4AAAI2026FSS.pdf", "enabled": true },
+    { "type": "paper", "label": "Paper", "icon": "fas fa-file-pdf", "url": "https://aaai.org/conference/fall-symposia/2026-fall-symposium-series-2/", "enabled": true }
+  ],
+  "abstract": {
+    "title": "Abstract",
+    "body": "Predicting post-surgical seizure outcomes in pharmacoresistant epilepsy is a clinical challenge. Conventional deep-learning approaches operate on static, single-timepoint pre-operative scans, omitting longitudinal morphological changes. We propose <i>Neuro-Oracle</i>, a three-stage framework that: (i) distils pre-to-post-operative MRI changes into a compact 512-dimensional trajectory vector using a 3D Siamese contrastive encoder; (ii) retrieves historically similar surgical trajectories from a population archive via nearest-neighbour search; and (iii) synthesises a natural-language prognosis grounded in the retrieved evidence using a quantized Llama-3-8B reasoning agent. Evaluations are conducted on the public EPISURG dataset (<i>N</i>=268 longitudinally paired cases) using five-fold stratified cross-validation. Since ground-truth seizure-freedom scores are unavailable, we utilize a clinical proxy label based on the resection type. We acknowledge that the network representations may potentially learn the anatomical features of the resection cavities (i.e., temporal versus non-temporal locations) rather than true prognostic morphometry. Our current evaluation thus serves mainly as a proof-of-concept for the trajectory-aware retrieval architecture. Trajectory-based classifiers achieve AUC values between 0.834 and 0.905, compared with 0.793 for a single-timepoint ResNet-50 baseline. The Neuro-Oracle agent (M5) matches the AUC of purely discriminative trajectory classifiers (0.867) while producing structured justifications with zero observed hallucinations under our audit protocol. A Siamese Diversity Ensemble (M6) of trajectory-space classifiers attains an AUC of 0.905 without language-model overhead."
+  },
+  "sections": [
+    {
+      "type": "group",
+      "title": "Dataset and Preprocessing",
+      "blocks": [
+        {
+          "type": "text",
+          "align": "justify",
+          "body": "All experiments use EPISURG, a public collection of 430 T1-weighted MRI scans from epilepsy surgery patients; 268 subjects have both a pre-operative and a post-operative scan. Because the public release contains no per-patient Engel seizure-freedom scores, each subject receives a binary proxy label derived from surgery type. Temporal procedures, including lobectomy, lesionectomy, and multilobar temporal resections, are labelled <i>y</i>&nbsp;=&nbsp;0 (favourable outcome proxy, cited seizure-freedom rate 65–70% at two years), while purely extra-temporal (frontal, parietal, occipital) resections and hemispherectomy are labelled <i>y</i>&nbsp;=&nbsp;1 (less-favourable outcome proxy, cited rate 40–55%). The cohort comprises 215 subjects with <i>y</i>&nbsp;=&nbsp;0 and 53 with <i>y</i>&nbsp;=&nbsp;1, a ratio of roughly 4:1. Each post-operative scan is rigidly registered (6 DOF) to its pre-operative scan with ANTsPy; both volumes are then z-score normalised and centre-cropped or zero-padded to a 128&nbsp;×&nbsp;128&nbsp;×&nbsp;128 grid at 1&nbsp;mm isotropic resolution. Deformable registration is deliberately avoided, since non-linear warping would smooth the localised volume changes the model aims to capture."
+        },
+        {
+          "type": "callout",
+          "variant": "danger",
+          "body": "<b>Proxy-label caveat.</b> Because the label follows resection type and every model sees the post-operative scan, the networks may learn the anatomy of temporal versus non-temporal resection cavities rather than subtle epileptogenic pathology, in effect predicting surgery type instead of seizure outcome. All reported metrics therefore measure proxy-label recovery, not clinical seizure-freedom prognosis. Neuro-Oracle should be read as an architectural proof-of-concept, designed to be readily applicable once per-patient outcome registries become available."
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "title": "Method",
+      "blocks": [
+        {
+          "type": "figure",
+          "image": "static/images/framework.png",
+          "alt": "Neuro-Oracle in three phases: trajectory encoding with a shared 3D ResNet-50, trajectory retrieval from a FAISS population archive, and agentic RAG prognosis with Llama-3-8B-Instruct",
+          "width": "100%",
+          "caption": "<b>Figure 1.</b> Overview of the proposed Neuro-Oracle framework. (i) Pre- and post-operative MRI pairs are registered and encoded through a shared 3D Siamese ResNet-50 backbone. (ii) The morphological difference is projected into a compact trajectory vector, which is used to retrieve historically similar cases from a population archive. (iii) A quantized LLM reasoning agent evaluates the retrieved evidence to synthesize a transparent, natural-language surgical prognosis."
+        },
+        {
+          "type": "list",
+          "ordered": true,
+          "align": "left",
+          "items": [
+            "<b>Contrastive trajectory encoding.</b> A weight-shared 3D Siamese ResNet-50 encodes the pre-operative scan and the rigidly co-registered post-operative scan. An MLP head projects their feature difference to a 512-dimensional, <span class=\"nowrap\">ℓ<sub>2</sub>-normalised</span> trajectory vector Δ<i>v</i>. The encoder is trained with an equal-weight sum of Supervised Contrastive loss (temperature τ&nbsp;=&nbsp;0.07) and Focal Loss, the latter countering the 4:1 class imbalance.",
+            "<b>Population archive and retrieval.</b> The frozen encoder embeds every training subject, and the resulting unit-norm vectors are stored in a FAISS exact inner-product index (<span class=\"is-family-monospace\">IndexFlatIP</span>), so the inner product equals cosine similarity. For each query, the <i>k</i>&nbsp;=&nbsp;5 most similar historical trajectories are retrieved.",
+            "<b>Calibrated LLM reasoning agent.</b> The query profile and the retrieved neighbours (age, sex, outcome) form a structured prompt for a 4-bit NF4 quantized Llama-3-8B-Instruct, which is instructed to set aside matches with an age gap above 15 years and to answer SUCCESS or FAILURE with a one-sentence justification. The final probability blends the neighbour vote with the LLM verdict as <i>p</i><sub>Oracle</sub> = 0.60&nbsp;×&nbsp;<i>p</i><sub>neighbor</sub> + 0.40&nbsp;×&nbsp;<i>p</i><sub>LLM</sub>, where <i>p</i><sub>neighbor</sub> is the fraction of retrieved neighbours with <i>y</i>&nbsp;=&nbsp;1 and <i>p</i><sub>LLM</sub> is 0.20 for a SUCCESS verdict and 0.80 otherwise. A case is assigned <i>y</i>&nbsp;=&nbsp;1 when <i>p</i><sub>Oracle</sub> exceeds the default threshold of 0.50."
+          ]
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "title": "Experimental Setup",
+      "align": "justify",
+      "body": "All methods are evaluated with five-fold stratified cross-validation (seed 42), which preserves the 4:1 class ratio in every fold. For each test fold, an independent encoder is trained on the other four folds, and the FAISS index is rebuilt from that split's non-augmented training subjects only, so no test subject or augmented sample ever enters the retrieval pool. Seven methods are compared on the same 268 subjects: two static single-timepoint baselines trained on the post-operative scan, ResNet-50 (M1) and 3D-ViT (M2); four classifiers on frozen trajectory vectors, namely logistic regression (M3), a 2-layer MLP (M3b), cosine <span class=\"nowrap\"><i>k</i>-NN</span> (M4), and the Siamese Diversity Ensemble (M6), an equal-weight soft vote over ExtraTrees, two MLPs, and a calibrated RBF-SVC; and Neuro-Oracle (M5). AUC-ROC is the primary metric, and F1, sensitivity, specificity, and balanced accuracy are secondary. All metrics are computed on the union of the five held-out folds, which covers each subject exactly once."
+    },
+    {
+      "type": "group",
+      "title": "Results",
+      "blocks": [
+        { "type": "subtitle", "text": "Primary Performance Comparison" },
+        {
+          "type": "text",
+          "align": "justify",
+          "body": "Trajectory-based classifiers (M3–M6) reach substantially higher sensitivity on the minority class than the static ResNet-50 baseline (M1, 0.396), suggesting that the longitudinal difference encoding carries signal absent from a single scan (Table 1). Among them, Siamese + Logistic Regression (M3) attains the highest sensitivity (0.849) and the Siamese Diversity Ensemble (M6) the highest AUC (0.905). The static 3D-ViT baseline (M2) is nonetheless competitive, with an AUC of 0.867 and the highest balanced accuracy (0.871). Neuro-Oracle (M5, AUC 0.867) matches M2 and Siamese + <span class=\"nowrap\"><i>k</i>-NN</span> (M4, AUC 0.868) while also producing a natural-language justification for every prediction (Figures 2 and 3)."
+        },
+        {
+          "type": "table",
+          "caption": "<b>Table 1.</b> Epilepsy surgical prognosis on EPISURG (<i>N</i>=268, 5-fold stratified CV). BalAcc = (Sensitivity + Specificity) / 2. Best value per column in <b>bold</b>.",
+          "columns": [
+            { "header": "Method", "align": "left" },
+            { "header": "AUC ↑" },
+            { "header": "F1 ↑" },
+            { "header": "Sensitivity ↑" },
+            { "header": "Specificity ↑" },
+            { "header": "Balanced<br>Acc. ↑" }
+          ],
+          "rows": [
+            { "cells": ["<i>Static encoders</i>", "", "", "", "", ""] },
+            { "cells": ["ResNet-50 Static", "0.793", { "v": "0.775", "class": "best" }, "0.396", "0.921", "0.659"] },
+            { "cells": ["3D-ViT Static", "0.867", { "v": "0.775", "class": "best" }, "0.811", { "v": "0.930", "class": "best" }, { "v": "0.871", "class": "best" }] },
+            { "cells": ["<i>Siamese-based models</i>", "", "", "", "", ""] },
+            { "cells": ["Siamese + Logistic Regression", "0.883", "0.629", { "v": "0.849", "class": "best" }, "0.791", "0.820"] },
+            { "cells": ["Siamese + 2-Layer MLP", "0.834", "0.628", "0.811", "0.809", "0.810"] },
+            { "cells": ["Siamese + <i>k</i>-NN", "0.868", "0.717", "0.717", { "v": "0.930", "class": "best" }, "0.824"] },
+            { "cells": ["Siamese Diversity Ensemble (M6)", { "v": "0.905", "class": "best" }, "0.741", "0.755", { "v": "0.930", "class": "best" }, "0.843"] },
+            { "cells": ["<i>Proposed framework</i>", "", "", "", "", ""] },
+            { "cells": ["Neuro-Oracle (M5, ours)", "0.867", "0.600", "0.566", "0.921", "0.744"] }
+          ]
+        },
+        {
+          "type": "figure",
+          "image": "static/images/roc_curves.png",
+          "alt": "ROC curves of six methods on EPISURG under 5-fold stratified cross-validation, with AUCs from 0.793 (ResNet-50 Static) to 0.883 (Siamese + LogReg)",
+          "width": "80%",
+          "caption": "<b>Figure 2.</b> ROC curves for six baseline and proposed methods under 5-fold stratified CV on EPISURG (<i>N</i>=268); Siamese Diversity Ensemble (M6) is omitted for visual clarity. AUC values are reported in Table 1."
+        },
+        {
+          "type": "figure",
+          "image": "static/images/confusion_matrix.png",
+          "alt": "Aggregated 5-fold confusion matrix of Neuro-Oracle (M5): 198 true negatives, 17 false positives, 23 false negatives, and 30 true positives",
+          "width": "70%",
+          "caption": "<b>Figure 3.</b> Aggregated confusion matrix for Neuro-Oracle (M5), 5-fold stratified CV. Rows: ground-truth proxy label (0=temporal resection, corresponding to Success / Engel I; 1=non-temporal or complex resection, corresponding to Failure / Engel II-IV); columns: predicted label. M5 achieves specificity of 0.921 and sensitivity of 0.566 at the default threshold."
+        },
+        { "type": "subtitle", "text": "Threshold-Optimised Performance" },
+        {
+          "type": "text",
+          "align": "justify",
+          "body": "Threshold optimisation chiefly benefits Neuro-Oracle (Table 2). At its optimised threshold of 0.34, sensitivity rises from 0.566 to 0.698 while specificity falls only from 0.921 to 0.916, lifting balanced accuracy from 0.744 to 0.807: markedly fewer less-favourable outcomes are missed at the cost of a marginal rise in false positives. Siamese + <span class=\"nowrap\"><i>k</i>-NN</span> (M4) keeps the same operating point at its optimum of 0.42, and M3 and M3b retain 0.50."
+        },
+        {
+          "type": "table",
+          "caption": "<b>Table 2.</b> Threshold-optimised performance. Threshold selected via grid search over [0.30, 0.50] (step 0.02), maximising balanced accuracy on aggregate held-out predictions. M3 and M3b retain τ = 0.50 as optimal.",
+          "columns": [
+            { "header": "ID", "align": "left" },
+            { "header": "Method", "align": "left" },
+            { "header": "τ" },
+            { "header": "AUC ↑" },
+            { "header": "Sensitivity ↑" },
+            { "header": "Specificity ↑" },
+            { "header": "Balanced<br>Acc. ↑" }
+          ],
+          "rows": [
+            { "cells": ["M3", "Siamese + Logistic Regression", "0.50", { "v": "0.883", "class": "best" }, { "v": "0.849", "class": "best" }, "0.791", "0.820"] },
+            { "cells": ["M4", "Siamese + <i>k</i>-NN", "0.42", "0.868", "0.717", { "v": "0.930", "class": "best" }, { "v": "0.824", "class": "best" }] },
+            { "cells": ["M5", "Neuro-Oracle (ours)", "0.34", "0.867", "0.698", "0.916", "0.807"] }
+          ]
+        },
+        { "type": "subtitle", "text": "Ablation Study" },
+        {
+          "type": "text",
+          "align": "justify",
+          "body": "Replacing the trained encoder with a random, untrained one reduces performance to near chance (AUC 0.488), confirming that the learned trajectory vectors carry genuine discriminative signal (Table 3). Restricting retrieval to <i>k</i>&nbsp;=&nbsp;1 lowers AUC to 0.741, showing the benefit of multi-neighbour vote smoothing. Removing the age-gap filter leaves AUC, sensitivity, and balanced accuracy unchanged, consistent with the moderate age variance in EPISURG; the filter's role is to improve the coherence of the agent's reasoning rather than the discriminative score. Figure 4 further contrasts input modality and reasoning engine: relative to the single-scan <span class=\"nowrap\"><i>k</i>-NN</span> reference (0.793), switching to the trajectory Δ<i>v</i> (0.868) or to the Llama-3 agent (0.867) raises AUC, and the full pipeline (0.867) preserves this level while adding clinical reasoning."
+        },
+        {
+          "type": "table",
+          "caption": "<b>Table 3.</b> Ablation study of Neuro-Oracle pipeline components (<i>N</i> = 268, 5-fold stratified cross-validation).",
+          "columns": [
+            { "header": "Model", "align": "left" },
+            { "header": "Configuration", "align": "left" },
+            { "header": "AUC ↑" },
+            { "header": "Sensitivity ↑" },
+            { "header": "Balanced<br>Acc. ↑" }
+          ],
+          "rows": [
+            { "cells": ["Random encoder", "Gaussian init., no training", "0.488", "0.038", "0.486"] },
+            { "cells": ["Retrieval baseline", "<i>k</i> = 1 (greedy 1-NN,<br>no vote smoothing)", "0.741", "0.585", "0.741"] },
+            { "cells": ["Neuro-Oracle", "w/o age filter (δ → ∞)", "0.867", "0.566", "0.744"] },
+            { "cells": ["Neuro-Oracle M5", "Full model (<i>k</i> = 5, δ = 15 yr)", "0.867", "0.566", "0.744"] },
+            { "cells": ["Siamese Diversity Ensemble (M6)", "Ensemble of diverse models", { "v": "0.905", "class": "best" }, { "v": "0.755", "class": "best" }, { "v": "0.843", "class": "best" }] }
+          ]
+        },
+        {
+          "type": "figure",
+          "image": "static/images/ablation_bar.png",
+          "alt": "Bar chart of AUC-ROC: single scan with k-NN 0.793, single scan with Llama-3 0.867, trajectory with k-NN 0.868, and trajectory with Llama-3 (Neuro-Oracle) 0.867",
+          "width": "85%",
+          "caption": "<b>Figure 4.</b> AUC-ROC across input modality and reasoning engine combinations. Single scan with <span class=\"nowrap\"><i>k</i>-NN</span> achieves 0.793; switching to longitudinal trajectory Δ<i>v</i> (0.868) or using a Llama-3 reasoning agent (0.867) individually increase performance. The full Neuro-Oracle pipeline (Trajectory Δ<i>v</i> + Llama-3) preserves the high performance of the geometric embedding and generates interpretative clinical reasoning. The chance level AUC=0.5 is shown as a dashed red line."
+        },
+        { "type": "subtitle", "text": "Retrieval and Embedding Space Quality" },
+        {
+          "type": "text",
+          "align": "justify",
+          "body": "Table 4 summarises embedding and retrieval quality. A mean top-5 cosine similarity of 0.919 indicates that queries typically find close neighbours in the archive, in line with the compact clusters visible in Figure 5. Top-5 retrieval fidelity reaches 83.0%, and the calibration MAE of 0.189 reflects the inherent uncertainty of predicting a proxy label from geometric features on an imbalanced cohort."
+        },
+        {
+          "type": "table",
+          "caption": "<b>Table 4.</b> Embedding space and retrieval quality metrics (<i>N</i> = 268 subjects; 512-dimensional FAISS exact inner-product index).",
+          "columns": [
+            { "header": "Metric", "align": "left" },
+            { "header": "Value" }
+          ],
+          "rows": [
+            { "cells": ["Top-5 retrieval fidelity (%) ↑", { "v": "83.0", "class": "best" }] },
+            { "cells": ["Mean cosine similarity (top-5) ↑", { "v": "0.919", "class": "best" }] },
+            { "cells": ["Calibration MAE (label-weighted) ↓", { "v": "0.189", "class": "best" }] }
+          ]
+        },
+        {
+          "type": "figure",
+          "image": "static/images/trajectory_tsne.png",
+          "alt": "t-SNE projection of the 512-dimensional trajectory vectors of all 268 EPISURG subjects, coloured by proxy label",
+          "width": "75%",
+          "caption": "<b>Figure 5.</b> t-SNE projection (perplexity = 30, 2000 iterations) of the 512-dim <span class=\"nowrap\">ℓ<sub>2</sub>-normalised</span> trajectory vectors for all 268 EPISURG subjects. Green circles show proxy label <i>y</i>=0 (temporal resection, corresponding to Success / Engel I in legend); Red circles show <i>y</i>=1 (non-temporal or complex resection, corresponding to Failure / Engel II-IV)."
+        },
+        { "type": "subtitle", "text": "Interpretability Audit of the LLM Agent" },
+        {
+          "type": "text",
+          "align": "justify",
+          "body": "An audit of the raw Llama-3-8B-Instruct outputs records an age-filter adherence of 73.9% and a zero-hallucination rate of 100.0%. No reply contained information beyond the supplied context, which reflects the tightly structured prompt rather than an inherent capability of the language model, and the agent followed the age-reasoning rule in most, though not all, cases. Both rates are research audit measures and should not be read as guarantees of clinical safety."
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "title": "Limitations and Future Work",
+      "align": "justify",
+      "body": "The cohort of 268 subjects is too small to yield confidence intervals narrow enough for strong claims about pairwise method differences, and all subjects come from a single centre, which limits conclusions about cross-site and cross-scanner generalisation. Future work should link EPISURG scans to de-identified Engel outcome registries under ethical approval, evaluate cross-centre generalisation on independent cohorts, and examine whether supervised fine-tuning of the quantized agent on outcome-labelled clinical notes improves the fidelity of its reasoning."
+    }
+  ],
+  "poster": { "enabled": false, "title": "Poster", "file": "paper_poster.pdf" },
+  "slides": { "enabled": true, "title": "Slides", "file": "NeuroOracle_AizierjiangAiersilan_silides4AAAI2026FSS.pdf" },
+  "bibtex": {
+    "title": "BibTeX",
+    "entry": "@inproceedings{aiersilan2026neurooracle,\n  title     = {{Neuro-Oracle}: A Trajectory-Aware Agentic {RAG} Framework\n               for Interpretable Epilepsy Surgical Prognosis},\n  author    = {Aiersilan, Aizierjiang and Koubeissi, Mohamad},\n  booktitle = {Proceedings of the AAAI Symposium Series},\n  publisher = {AAAI Press},\n  year      = {2026}\n}"
+  },
+  "footer": {
+    "showLinks": false,
+    "text": "© 2026 Aizierjiang Aiersilan."
+  }
+}
