@@ -26,7 +26,7 @@
     { "type": "code", "label": "Code", "icon": "fab fa-github", "url": "REPLACE_ME", "enabled": false },
     { "type": "confab", "label": "Confab", "icon": "fas fa-calendar-check", "url": "https://cal.com/ezhar/30min", "enabled": true },
     { "type": "slides", "label": "Slides", "icon": "fas fa-chalkboard-teacher", "url": "NeuroOracle_AizierjiangAiersilan_silides4AAAI2026FSS.pdf", "enabled": true },
-    { "type": "paper", "label": "Paper", "icon": "fas fa-file-pdf", "url": "https://aaai.org/conference/fall-symposia/2026-fall-symposium-series-2/", "enabled": true }
+    { "type": "paper", "label": "Paper", "icon": "fas fa-file-pdf", "url": "https://doi.org/10.1609/aaaiss.v10i1.43540", "enabled": true }
   ],
   "abstract": {
     "title": "Abstract",
